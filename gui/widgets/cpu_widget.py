@@ -82,7 +82,7 @@ class CPUWidget(QWidget):
         layout.addWidget(self.cores_group)
         
         # Gráfico de historial
-        chart_group = QGroupBox("Historial de Uso (Última Hora)")
+        chart_group = QGroupBox("Historial de Uso (Tiempo Real - 60 segundos)")
         chart_layout = QVBoxLayout(chart_group)
         
         # Crear figura de matplotlib
@@ -225,21 +225,29 @@ class CPUWidget(QWidget):
             timestamps = history['timestamps']
             usage = history['cpu_usage']
             
-            # Convertir timestamps a minutos relativos
+            # Convertir timestamps a segundos relativos (últimos 60 segundos)
             if timestamps:
                 now = datetime.now()
-                times_relative = [(now - t).total_seconds() / 60 for t in timestamps]
-                times_relative = [-t for t in times_relative]  # Negativos para mostrar pasado
+                times_relative = [-(now - t).total_seconds() for t in timestamps]
                 
-                self.ax.fill_between(times_relative, usage, alpha=0.3, color='#2196F3')
-                self.ax.plot(times_relative, usage, color='#2196F3', linewidth=2)
+                # Filtrar solo los últimos 60 segundos
+                filtered_times = []
+                filtered_usage = []
+                for t, u in zip(times_relative, usage):
+                    if t >= -60:
+                        filtered_times.append(t)
+                        filtered_usage.append(u)
+                
+                if filtered_times:
+                    self.ax.fill_between(filtered_times, filtered_usage, alpha=0.3, color='#2196F3')
+                    self.ax.plot(filtered_times, filtered_usage, color='#2196F3', linewidth=2)
                 
                 self.ax.set_xlim(-60, 0)
                 self.ax.set_ylim(0, 100)
-                self.ax.set_xlabel('Tiempo (minutos)')
+                self.ax.set_xlabel('Tiempo (segundos)')
                 self.ax.set_ylabel('Uso CPU (%)')
                 self.ax.grid(True, alpha=0.3)
-                self.ax.set_title('Uso de CPU en el tiempo')
+                self.ax.set_title('Uso de CPU en tiempo real')
         else:
             self.ax.text(0.5, 0.5, 'Recopilando datos...', 
                         ha='center', va='center', transform=self.ax.transAxes)

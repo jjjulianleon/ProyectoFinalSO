@@ -145,7 +145,7 @@ class MemoryWidget(QWidget):
         layout.addWidget(frag_group)
         
         # Gráfico de historial
-        chart_group = QGroupBox("Historial de Uso (Última Hora)")
+        chart_group = QGroupBox("Historial de Uso (Tiempo Real - 60 segundos)")
         chart_layout = QVBoxLayout(chart_group)
         
         self.figure = Figure(figsize=(8, 3), dpi=100)
@@ -259,24 +259,35 @@ class MemoryWidget(QWidget):
             swap_percent = history['swap_percent']
             
             now = datetime.now()
-            times_relative = [-(now - t).total_seconds() / 60 for t in timestamps]
+            times_relative = [-(now - t).total_seconds() for t in timestamps]
             
-            # Gráfico de RAM
-            self.ax.fill_between(times_relative, mem_percent, alpha=0.3, color='#9c27b0', label='RAM')
-            self.ax.plot(times_relative, mem_percent, color='#9c27b0', linewidth=2)
+            # Filtrar solo los últimos 60 segundos
+            filtered_times = []
+            filtered_mem = []
+            filtered_swap = []
+            for t, m, s in zip(times_relative, mem_percent, swap_percent):
+                if t >= -60:
+                    filtered_times.append(t)
+                    filtered_mem.append(m)
+                    filtered_swap.append(s)
             
-            # Gráfico de Swap
-            if any(s > 0 for s in swap_percent):
-                self.ax.fill_between(times_relative, swap_percent, alpha=0.3, color='#ff5722', label='Swap')
-                self.ax.plot(times_relative, swap_percent, color='#ff5722', linewidth=2, linestyle='--')
+            if filtered_times:
+                # Gráfico de RAM
+                self.ax.fill_between(filtered_times, filtered_mem, alpha=0.3, color='#9c27b0', label='RAM')
+                self.ax.plot(filtered_times, filtered_mem, color='#9c27b0', linewidth=2)
+                
+                # Gráfico de Swap
+                if any(s > 0 for s in filtered_swap):
+                    self.ax.fill_between(filtered_times, filtered_swap, alpha=0.3, color='#ff5722', label='Swap')
+                    self.ax.plot(filtered_times, filtered_swap, color='#ff5722', linewidth=2, linestyle='--')
             
             self.ax.set_xlim(-60, 0)
             self.ax.set_ylim(0, 100)
-            self.ax.set_xlabel('Tiempo (minutos)')
+            self.ax.set_xlabel('Tiempo (segundos)')
             self.ax.set_ylabel('Uso (%)')
             self.ax.grid(True, alpha=0.3)
             self.ax.legend(loc='upper left')
-            self.ax.set_title('Uso de Memoria en el tiempo')
+            self.ax.set_title('Uso de Memoria en tiempo real')
         else:
             self.ax.text(0.5, 0.5, 'Recopilando datos...', 
                         ha='center', va='center', transform=self.ax.transAxes)

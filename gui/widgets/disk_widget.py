@@ -88,7 +88,7 @@ class DiskWidget(QWidget):
         layout.addWidget(frag_group)
         
         # Gráfico de historial de I/O
-        chart_group = QGroupBox("Historial de I/O (Última Hora)")
+        chart_group = QGroupBox("Historial de I/O (Tiempo Real - 60 segundos)")
         chart_layout = QVBoxLayout(chart_group)
         
         self.figure = Figure(figsize=(8, 3), dpi=100)
@@ -213,23 +213,38 @@ class DiskWidget(QWidget):
                     write_speeds.append(0)
             
             now = datetime.now()
-            times_relative = [-(now - t).total_seconds() / 60 for t in timestamps]
+            times_relative = [-(now - t).total_seconds() for t in timestamps]
             
-            # Gráfico de lectura
-            self.ax.fill_between(times_relative, read_speeds, alpha=0.3, color='#4caf50', label='Lectura')
-            self.ax.plot(times_relative, read_speeds, color='#4caf50', linewidth=2)
+            # Filtrar solo los últimos 60 segundos
+            filtered_times = []
+            filtered_read = []
+            filtered_write = []
+            for t, r, w in zip(times_relative, read_speeds, write_speeds):
+                if t >= -60:
+                    filtered_times.append(t)
+                    filtered_read.append(r)
+                    filtered_write.append(w)
             
-            # Gráfico de escritura
-            self.ax.fill_between(times_relative, write_speeds, alpha=0.3, color='#ff9800', label='Escritura')
-            self.ax.plot(times_relative, write_speeds, color='#ff9800', linewidth=2)
+            if filtered_times:
+                # Gráfico de lectura
+                self.ax.fill_between(filtered_times, filtered_read, alpha=0.3, color='#4caf50', label='Lectura')
+                self.ax.plot(filtered_times, filtered_read, color='#4caf50', linewidth=2)
+                
+                # Gráfico de escritura
+                self.ax.fill_between(filtered_times, filtered_write, alpha=0.3, color='#ff9800', label='Escritura')
+                self.ax.plot(filtered_times, filtered_write, color='#ff9800', linewidth=2)
+                
+                max_val = max(max(filtered_read + [1]), max(filtered_write + [1]))
+            else:
+                max_val = 1
             
             self.ax.set_xlim(-60, 0)
-            self.ax.set_ylim(0, max(max(read_speeds + [1]), max(write_speeds + [1])) * 1.1)
-            self.ax.set_xlabel('Tiempo (minutos)')
+            self.ax.set_ylim(0, max_val * 1.1)
+            self.ax.set_xlabel('Tiempo (segundos)')
             self.ax.set_ylabel('Velocidad (MB/s)')
             self.ax.grid(True, alpha=0.3)
             self.ax.legend(loc='upper left')
-            self.ax.set_title('Velocidad de I/O en el tiempo')
+            self.ax.set_title('Velocidad de I/O en tiempo real')
         else:
             self.ax.text(0.5, 0.5, 'Recopilando datos...', 
                         ha='center', va='center', transform=self.ax.transAxes)

@@ -129,7 +129,7 @@ class NetworkWidget(QWidget):
         self.ax = self.figure.add_subplot(111)
         
         chart_layout.addWidget(self.canvas)
-        tabs.addTab(chart_widget, "Historial")
+        tabs.addTab(chart_widget, "Tiempo Real")
         
         # Tab de interfaces
         interfaces_widget = QWidget()
@@ -251,25 +251,38 @@ class NetworkWidget(QWidget):
             upload = history['upload_kbps']
             
             now = datetime.now()
-            times_relative = [-(now - t).total_seconds() / 60 for t in timestamps]
+            times_relative = [-(now - t).total_seconds() for t in timestamps]
             
-            # Gráfico de download
-            self.ax.fill_between(times_relative, download, alpha=0.3, color='#4caf50', label='Download')
-            self.ax.plot(times_relative, download, color='#4caf50', linewidth=2)
+            # Filtrar solo los últimos 60 segundos
+            filtered_times = []
+            filtered_download = []
+            filtered_upload = []
+            for t, d, u in zip(times_relative, download, upload):
+                if t >= -60:
+                    filtered_times.append(t)
+                    filtered_download.append(d)
+                    filtered_upload.append(u)
             
-            # Gráfico de upload
-            self.ax.fill_between(times_relative, upload, alpha=0.3, color='#2196f3', label='Upload')
-            self.ax.plot(times_relative, upload, color='#2196f3', linewidth=2)
-            
-            max_val = max(max(download + [1]), max(upload + [1]))
+            if filtered_times:
+                # Gráfico de download
+                self.ax.fill_between(filtered_times, filtered_download, alpha=0.3, color='#4caf50', label='Download')
+                self.ax.plot(filtered_times, filtered_download, color='#4caf50', linewidth=2)
+                
+                # Gráfico de upload
+                self.ax.fill_between(filtered_times, filtered_upload, alpha=0.3, color='#2196f3', label='Upload')
+                self.ax.plot(filtered_times, filtered_upload, color='#2196f3', linewidth=2)
+                
+                max_val = max(max(filtered_download + [1]), max(filtered_upload + [1]))
+            else:
+                max_val = 1
             
             self.ax.set_xlim(-60, 0)
             self.ax.set_ylim(0, max_val * 1.1)
-            self.ax.set_xlabel('Tiempo (minutos)')
+            self.ax.set_xlabel('Tiempo (segundos)')
             self.ax.set_ylabel('Velocidad (KB/s)')
             self.ax.grid(True, alpha=0.3)
             self.ax.legend(loc='upper left')
-            self.ax.set_title('Ancho de Banda - Upload y Download')
+            self.ax.set_title('Ancho de Banda en tiempo real')
         else:
             self.ax.text(0.5, 0.5, 'Recopilando datos...', 
                         ha='center', va='center', transform=self.ax.transAxes)

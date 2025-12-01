@@ -40,6 +40,10 @@ class NetworkMonitor:
         self._last_counters = None
         self._last_time = None
         
+        # Velocidades actuales calculadas
+        self._current_upload_speed = 0
+        self._current_download_speed = 0
+        
         # Lock para acceso thread-safe
         self._lock = Lock()
         
@@ -97,8 +101,6 @@ class NetworkMonitor:
         Returns:
             Diccionario con contadores de red
         """
-        current_time = time.time()
-        
         if per_interface:
             counters = psutil.net_io_counters(pernic=True)
             result = {}
@@ -121,18 +123,10 @@ class NetworkMonitor:
         else:
             io = psutil.net_io_counters()
             
-            # Calcular velocidades
-            upload_speed = 0
-            download_speed = 0
-            
-            if self._last_counters and self._last_time:
-                time_diff = current_time - self._last_time
-                if time_diff > 0:
-                    upload_speed = (io.bytes_sent - self._last_counters.bytes_sent) / time_diff
-                    download_speed = (io.bytes_recv - self._last_counters.bytes_recv) / time_diff
-            
-            self._last_counters = io
-            self._last_time = current_time
+            # Usar las velocidades calculadas por el hilo de monitoreo
+            with self._lock:
+                upload_speed = self._current_upload_speed
+                download_speed = self._current_download_speed
             
             return {
                 'bytes_sent': io.bytes_sent,
@@ -259,19 +253,40 @@ class NetworkMonitor:
             }
     
     def _update_history(self):
-        """Actualiza el historial de red."""
-        io = self.get_io_counters()
+        """Actualiza el historial de red y calcula velocidades."""
+        current_time = time.time()
+        io = psutil.net_io_counters()
+        
+        # Calcular velocidades
+        upload_speed = 0
+        download_speed = 0
+        
+        if self._last_counters and self._last_time:
+            time_diff = current_time - self._last_time
+            if time_diff > 0:
+                upload_speed = (io.bytes_sent - self._last_counters.bytes_sent) / time_diff
+                download_speed = (io.bytes_recv - self._last_counters.bytes_recv) / time_diff
+        
+        self._last_counters = io
+        self._last_time = current_time
+        
         timestamp = datetime.now()
         
         with self._lock:
-            self.upload_history.append(io['upload_speed_kbps'])
-            self.download_history.append(io['download_speed_kbps'])
+            # Guardar velocidades actuales para el widget
+            self._current_upload_speed = upload_speed
+            self._current_download_speed = download_speed
+            
+            # Agregar al historial
+            self.upload_history.append(upload_speed / 1024)  # KB/s
+            self.download_history.append(download_speed / 1024)  # KB/s
             self.timestamps.append(timestamp)
     
     def _monitor_loop(self):
         """Loop principal de monitoreo en segundo plano."""
         # Primera lectura para inicializar
-        self.get_io_counters()
+        self._last_counters = psutil.net_io_counters()
+        self._last_time = time.time()
         
         while self._running:
             time.sleep(self.update_interval)
