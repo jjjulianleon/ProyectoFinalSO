@@ -1,0 +1,14 @@
+# Dependencias del proyecto
+# Monitor de Recursos del Sistema - USFQ
+
+# Librería principal para obtener información del sistema
+psutil>=5.9.0
+
+# Framework de interfaz gráfica
+PyQt5>=5.15.0
+
+# Librería para gráficos
+matplotlib>=3.5.0
+
+# Dependencias adicionales
+numpy>=1.21.0
