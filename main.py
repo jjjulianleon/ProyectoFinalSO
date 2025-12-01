@@ -11,7 +11,11 @@ Este programa permite monitorear en tiempo real:
 - Procesos del sistema (con capacidad de terminarlos)
 - Ancho de banda de red (upload y download)
 
-Autor: Estudiante USFQ
+Autores: 
+    - Julián León
+    - Jarod Tierra
+    - Andrés Vega
+
 Fecha: Diciembre 2025
 """
 

@@ -170,9 +170,9 @@ Esto permite que:
 
 | Nombre | Contribución |
 |--------|--------------|
-| [Nombre 1] | [Descripción de aportes] |
-| [Nombre 2] | [Descripción de aportes] |
-| [Nombre 3] | [Descripción de aportes] |
+| Julián León | Desarrollo e implementación del proyecto |
+| Jarod Tierra | Desarrollo e implementación del proyecto |
+| Andrés Vega | Desarrollo e implementación del proyecto |
 
 ---
 
