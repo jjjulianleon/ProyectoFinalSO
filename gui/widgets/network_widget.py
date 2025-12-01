@@ -43,9 +43,10 @@ class NetworkWidget(QWidget):
         download_layout = QVBoxLayout(download_widget)
         download_layout.setAlignment(Qt.AlignCenter)
         
-        download_icon = QLabel("⬇️")
-        download_icon.setFont(QFont('Arial', 32))
+        download_icon = QLabel("▼")
+        download_icon.setFont(QFont('Arial', 40, QFont.Bold))
         download_icon.setAlignment(Qt.AlignCenter)
+        download_icon.setStyleSheet("color: #4caf50;")
         
         self.download_speed_label = QLabel("0 KB/s")
         self.download_speed_label.setFont(QFont('Arial', 24, QFont.Bold))
@@ -54,6 +55,7 @@ class NetworkWidget(QWidget):
         
         download_title = QLabel("Download")
         download_title.setAlignment(Qt.AlignCenter)
+        download_title.setFont(QFont('Arial', 12, QFont.Bold))
         
         download_layout.addWidget(download_icon)
         download_layout.addWidget(self.download_speed_label)
@@ -66,9 +68,10 @@ class NetworkWidget(QWidget):
         upload_layout = QVBoxLayout(upload_widget)
         upload_layout.setAlignment(Qt.AlignCenter)
         
-        upload_icon = QLabel("⬆️")
-        upload_icon.setFont(QFont('Arial', 32))
+        upload_icon = QLabel("▲")
+        upload_icon.setFont(QFont('Arial', 40, QFont.Bold))
         upload_icon.setAlignment(Qt.AlignCenter)
+        upload_icon.setStyleSheet("color: #2196f3;")
         
         self.upload_speed_label = QLabel("0 KB/s")
         self.upload_speed_label.setFont(QFont('Arial', 24, QFont.Bold))
@@ -77,6 +80,7 @@ class NetworkWidget(QWidget):
         
         upload_title = QLabel("Upload")
         upload_title.setAlignment(Qt.AlignCenter)
+        upload_title.setFont(QFont('Arial', 12, QFont.Bold))
         
         upload_layout.addWidget(upload_icon)
         upload_layout.addWidget(self.upload_speed_label)
@@ -125,7 +129,7 @@ class NetworkWidget(QWidget):
         self.ax = self.figure.add_subplot(111)
         
         chart_layout.addWidget(self.canvas)
-        tabs.addTab(chart_widget, "📊 Historial")
+        tabs.addTab(chart_widget, "Historial")
         
         # Tab de interfaces
         interfaces_widget = QWidget()
@@ -141,7 +145,7 @@ class NetworkWidget(QWidget):
         header.setSectionResizeMode(QHeaderView.Stretch)
         
         interfaces_layout.addWidget(self.interfaces_table)
-        tabs.addTab(interfaces_widget, "🔌 Interfaces")
+        tabs.addTab(interfaces_widget, "Interfaces")
         
         # Tab de conexiones
         connections_widget = QWidget()
@@ -160,7 +164,7 @@ class NetworkWidget(QWidget):
         
         connections_layout.addWidget(self.connections_count_label)
         connections_layout.addWidget(self.connections_table)
-        tabs.addTab(connections_widget, "🔗 Conexiones")
+        tabs.addTab(connections_widget, "Conexiones")
         
         layout.addWidget(tabs)
         
@@ -175,12 +179,12 @@ class NetworkWidget(QWidget):
         
         # Actualizar estadísticas
         io = stats['io_counters']
-        self.total_download_label.setText(f"⬇️ Total Descargado: {io['bytes_recv_gb']:.2f} GB")
-        self.total_upload_label.setText(f"⬆️ Total Subido: {io['bytes_sent_gb']:.2f} GB")
-        self.packets_recv_label.setText(f"📥 Paquetes Recibidos: {io['packets_recv']:,}")
-        self.packets_sent_label.setText(f"📤 Paquetes Enviados: {io['packets_sent']:,}")
-        self.errors_label.setText(f"❌ Errores: In={io['errin']:,} / Out={io['errout']:,}")
-        self.drops_label.setText(f"🚫 Drops: In={io['dropin']:,} / Out={io['dropout']:,}")
+        self.total_download_label.setText(f"Total Descargado: {io['bytes_recv_gb']:.2f} GB")
+        self.total_upload_label.setText(f"Total Subido: {io['bytes_sent_gb']:.2f} GB")
+        self.packets_recv_label.setText(f"Paquetes Recibidos: {io['packets_recv']:,}")
+        self.packets_sent_label.setText(f"Paquetes Enviados: {io['packets_sent']:,}")
+        self.errors_label.setText(f"Errores: In={io['errin']:,} / Out={io['errout']:,}")
+        self.drops_label.setText(f"Drops: In={io['dropin']:,} / Out={io['dropout']:,}")
         
         # Actualizar interfaces
         interfaces = stats['interfaces']

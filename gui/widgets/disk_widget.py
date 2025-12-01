@@ -72,7 +72,7 @@ class DiskWidget(QWidget):
         layout.addWidget(io_group)
         
         # Panel de fragmentación (EXTRA)
-        frag_group = QGroupBox("⭐ Análisis de Fragmentación de Disco (Punto Extra)")
+        frag_group = QGroupBox("Análisis de Fragmentación de Disco (Punto Extra)")
         frag_layout = QVBoxLayout(frag_group)
         
         self.disk_frag_label = QLabel("Analizando fragmentación...")
@@ -169,21 +169,21 @@ class DiskWidget(QWidget):
         # Actualizar I/O
         io = stats['io_counters']
         if io:
-            self.read_speed_label.setText(f"⬇️ Velocidad Lectura: {io['read_speed_mb']:.2f} MB/s")
-            self.write_speed_label.setText(f"⬆️ Velocidad Escritura: {io['write_speed_mb']:.2f} MB/s")
-            self.total_read_label.setText(f"📖 Total Leído: {io['read_bytes_gb']:.2f} GB")
-            self.total_write_label.setText(f"✏️ Total Escrito: {io['write_bytes_gb']:.2f} GB")
+            self.read_speed_label.setText(f"Velocidad Lectura: {io['read_speed_mb']:.2f} MB/s")
+            self.write_speed_label.setText(f"Velocidad Escritura: {io['write_speed_mb']:.2f} MB/s")
+            self.total_read_label.setText(f"Total Leído: {io['read_bytes_gb']:.2f} GB")
+            self.total_write_label.setText(f"Total Escrito: {io['write_bytes_gb']:.2f} GB")
         
         # Actualizar fragmentación
         frag = stats['fragmentation']
         
         if frag['message']:
-            self.disk_frag_label.setText(f"ℹ️ {frag['message']}")
+            self.disk_frag_label.setText(f"{frag['message']}")
         
         if frag.get('fragmentation_percent', 0) > 0:
             self.disk_frag_details.setText(f"Fragmentación detectada: {frag['fragmentation_percent']:.1f}%")
         elif frag.get('available'):
-            self.disk_frag_details.setText("✅ Sistema de archivos moderno con baja fragmentación")
+            self.disk_frag_details.setText("Sistema de archivos moderno con baja fragmentación")
         else:
             self.disk_frag_details.setText("Información de fragmentación no disponible para este sistema de archivos")
         
