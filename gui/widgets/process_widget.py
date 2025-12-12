@@ -5,10 +5,16 @@ Con capacidad de matar procesos
 
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QGroupBox, QGridLayout, QProgressBar, QFrame,
+                             QTableWidget, QTableWidgetItem, QHeaderView,
+                             QMessageBox, QSizePolicy,
                              QSizePolicy, QTableWidget, QTableWidgetItem,
                              QHeaderView, QPushButton, QLineEdit, QMessageBox,
                              QComboBox, QDialog, QTextEdit, QDialogButtonBox,
                              QAbstractItemView)
+import matplotlib
+matplotlib.use('Qt5Agg')
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QFont, QColor
 from datetime import datetime
@@ -100,6 +106,7 @@ class ProcessDetailDialog(QDialog):
 class ProcessWidget(QWidget):
     """Widget para mostrar y gestionar procesos."""
     
+        
     def __init__(self, process_monitor, parent=None):
         super().__init__(parent)
         self.process_monitor = process_monitor
@@ -109,7 +116,6 @@ class ProcessWidget(QWidget):
         self.setup_ui()
         
     def setup_ui(self):
-        """Configura la interfaz del widget."""
         layout = QVBoxLayout(self)
         layout.setSpacing(10)
         
@@ -135,6 +141,20 @@ class ProcessWidget(QWidget):
             summary_layout.addWidget(label)
         
         layout.addWidget(summary_group)
+        
+        # --- NUEVO: Gráfico de Historial ---
+        chart_group = QGroupBox("Cantidad de Procesos Activos (Última Hora)")
+        chart_layout = QVBoxLayout(chart_group)
+        
+        self.figure = Figure(figsize=(8, 2), dpi=100) # Altura reducida (2) para no ocupar mucho
+        self.figure.patch.set_facecolor('#f0f0f0')
+        self.canvas = FigureCanvas(self.figure)
+        self.canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed) # Fixed altura
+        self.canvas.setFixedHeight(150) # Fijar altura en pixeles
+        self.ax = self.figure.add_subplot(111)
+        
+        chart_layout.addWidget(self.canvas)
+        layout.addWidget(chart_group)
         
         # Controles
         controls_layout = QHBoxLayout()
@@ -306,6 +326,50 @@ class ProcessWidget(QWidget):
         
         self.process_table.setSortingEnabled(True)
         self.filter_table()
+        self.update_chart()
+    
+    # --- NUEVO MÉTODO para actualizar el gráfico ---
+    def update_chart(self):
+        history = self.process_monitor.get_history()
+        
+        self.ax.clear()
+        
+        if history['timestamps'] and history['counts']:
+            timestamps = history['timestamps']
+            counts = history['counts']
+            
+            # Calcular tiempos relativos
+            now = datetime.now()
+            times_relative = [-(now - t).total_seconds() for t in timestamps]
+            
+            # Filtrar última hora (3600s)
+            filtered_times = []
+            filtered_counts = []
+            for t, c in zip(times_relative, counts):
+                if t >= -3600:
+                    filtered_times.append(t)
+                    filtered_counts.append(c)
+            
+            if filtered_times:
+                self.ax.plot(filtered_times, filtered_counts, color='#607d8b', linewidth=2)
+                self.ax.fill_between(filtered_times, filtered_counts, alpha=0.3, color='#607d8b')
+                
+                # Ajustar escalas
+                min_y = min(filtered_counts) * 0.9 if filtered_counts else 0
+                max_y = max(filtered_counts) * 1.1 if filtered_counts else 10
+                self.ax.set_ylim(min_y, max_y)
+            
+            self.ax.set_xlim(-3600, 0)
+            self.ax.set_xlabel('Tiempo (segundos)')
+            self.ax.set_ylabel('Nº Procesos')
+            self.ax.grid(True, alpha=0.3)
+        else:
+            self.ax.text(0.5, 0.5, 'Recopilando datos...',
+                        ha='center', va='center', transform=self.ax.transAxes)
+            self.ax.set_xlim(-3600, 0)
+        
+        self.figure.tight_layout()
+        self.canvas.draw()
     
     def get_selected_pid(self):
         """Obtiene el PID del proceso seleccionado."""

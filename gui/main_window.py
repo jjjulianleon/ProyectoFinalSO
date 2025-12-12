@@ -201,6 +201,7 @@ class MainWindow(QMainWindow):
         self.memory_monitor.start_monitoring()
         self.disk_monitor.start_monitoring()
         self.network_monitor.start_monitoring()
+        self.process_monitor.start_monitoring()
         
         # Primera actualización
         self.refresh_all()
@@ -213,6 +214,7 @@ class MainWindow(QMainWindow):
         self.memory_monitor.stop_monitoring()
         self.disk_monitor.stop_monitoring()
         self.network_monitor.stop_monitoring()
+        self.process_monitor.stop_monitoring()
         
     def update_fast_resources(self):
         """Actualiza recursos de alta frecuencia (CPU, Memoria, Red)."""

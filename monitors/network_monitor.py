@@ -5,6 +5,7 @@ Proporciona información sobre el uso de ancho de banda de la red
 
 import psutil
 import time
+import socket
 from collections import deque
 from datetime import datetime
 from threading import Thread, Lock
@@ -52,7 +53,7 @@ class NetworkMonitor:
         self._thread = None
     
     def get_interfaces(self):
-        """Obtiene la lista de interfaces de red."""
+        """Obtiene la lista de interfaces de red con familias legibles."""
         interfaces = []
         
         # Obtener direcciones
@@ -72,8 +73,17 @@ class NetworkMonitor:
             
             # Agregar direcciones
             for addr in addr_list:
+                # Traducir la familia a texto legible (IPv4/IPv6)
+                family_str = str(addr.family)
+                if addr.family == socket.AF_INET:
+                    family_str = 'IPv4'
+                elif addr.family == socket.AF_INET6:
+                    family_str = 'IPv6'
+                elif hasattr(psutil, "AF_LINK") and addr.family == psutil.AF_LINK:
+                    family_str = 'MAC'
+                
                 addr_info = {
-                    'family': str(addr.family),
+                    'family': family_str,
                     'address': addr.address,
                     'netmask': addr.netmask,
                     'broadcast': addr.broadcast
@@ -94,12 +104,6 @@ class NetworkMonitor:
     def get_io_counters(self, per_interface=False):
         """
         Obtiene los contadores de I/O de red.
-        
-        Args:
-            per_interface: Si es True, devuelve contadores por interfaz
-            
-        Returns:
-            Diccionario con contadores de red
         """
         if per_interface:
             counters = psutil.net_io_counters(pernic=True)
@@ -146,17 +150,8 @@ class NetworkMonitor:
             }
     
     def get_connections(self, kind='inet'):
-        """
-        Obtiene las conexiones de red activas.
-        
-        Args:
-            kind: Tipo de conexiones ('inet', 'inet4', 'inet6', 'tcp', 'udp', 'all')
-            
-        Returns:
-            Lista de conexiones activas
-        """
+        """Obtiene las conexiones de red activas."""
         connections = []
-        
         try:
             for conn in psutil.net_connections(kind=kind):
                 conn_info = {
@@ -201,14 +196,8 @@ class NetworkMonitor:
         return connections
     
     def get_current_speeds(self):
-        """
-        Obtiene las velocidades actuales de upload y download.
-        
-        Returns:
-            Diccionario con velocidades en diferentes unidades
-        """
+        """Obtiene las velocidades actuales."""
         io = self.get_io_counters()
-        
         return {
             'upload': {
                 'kbps': io['upload_speed_kbps'],
@@ -257,7 +246,6 @@ class NetworkMonitor:
         current_time = time.time()
         io = psutil.net_io_counters()
         
-        # Calcular velocidades
         upload_speed = 0
         download_speed = 0
         
@@ -273,18 +261,15 @@ class NetworkMonitor:
         timestamp = datetime.now()
         
         with self._lock:
-            # Guardar velocidades actuales para el widget
             self._current_upload_speed = upload_speed
             self._current_download_speed = download_speed
             
-            # Agregar al historial
-            self.upload_history.append(upload_speed / 1024)  # KB/s
-            self.download_history.append(download_speed / 1024)  # KB/s
+            self.upload_history.append(upload_speed / 1024)
+            self.download_history.append(download_speed / 1024)
             self.timestamps.append(timestamp)
     
     def _monitor_loop(self):
-        """Loop principal de monitoreo en segundo plano."""
-        # Primera lectura para inicializar
+        """Loop principal de monitoreo."""
         self._last_counters = psutil.net_io_counters()
         self._last_time = time.time()
         
@@ -294,19 +279,16 @@ class NetworkMonitor:
                 self._update_history()
     
     def start_monitoring(self):
-        """Inicia el monitoreo en segundo plano."""
         if not self._running:
             self._running = True
             self._thread = Thread(target=self._monitor_loop, daemon=True)
             self._thread.start()
     
     def stop_monitoring(self):
-        """Detiene el monitoreo en segundo plano."""
         self._running = False
         if self._thread:
             self._thread.join(timeout=2)
             self._thread = None
     
     def __del__(self):
-        """Destructor: asegura que el thread se detenga."""
         self.stop_monitoring()

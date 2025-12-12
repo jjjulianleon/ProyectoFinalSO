@@ -3,7 +3,7 @@ Módulo de monitoreo de Procesos
 Proporciona información sobre los procesos en ejecución
 incluyendo la capacidad de terminar procesos
 """
-
+from collections import deque
 import psutil
 import os
 import signal
@@ -23,7 +23,57 @@ class ProcessMonitor:
         self._lock = Lock()
         self._cached_processes = []
         self._last_update = None
-        self._cache_duration = 1  # Segundos
+        
+        # --- NUEVO: Historial para el gráfico ---
+        # Guardamos hasta 3600 segundos (1 hora)
+        self.count_history = deque(maxlen=3600)
+        self.timestamps = deque(maxlen=3600)
+        
+        # Control del hilo
+        self._running = False
+        self._thread = None
+        # ----------------------------------------
+        
+    # --- NUEVOS MÉTODOS para el monitoreo en segundo plano ---
+    def _monitor_loop(self):
+        """Loop que cuenta procesos cada segundo."""
+        while self._running:
+            try:
+                # Usamos len(pids()) que es rápido y ligero
+                count = len(psutil.pids())
+                timestamp = datetime.now()
+                
+                with self._lock:
+                    self.count_history.append(count)
+                    self.timestamps.append(timestamp)
+            except Exception:
+                pass
+            
+            time.sleep(1)
+
+    def start_monitoring(self):
+        """Inicia el hilo de monitoreo."""
+        if not self._running:
+            self._running = True
+            self._thread = Thread(target=self._monitor_loop, daemon=True)
+            self._thread.start()
+
+    def stop_monitoring(self):
+        """Detiene el hilo."""
+        self._running = False
+        if self._thread:
+            self._thread.join(timeout=1)
+            self._thread = None
+
+    def get_history(self):
+        """Devuelve el historial para el gráfico."""
+        with self._lock:
+            return {
+                'timestamps': list(self.timestamps),
+                'counts': list(self.count_history)
+            }
+    # --------------------------------------------------------
+    
     
     def get_process_list(self, sort_by='memory_percent', descending=True):
         """

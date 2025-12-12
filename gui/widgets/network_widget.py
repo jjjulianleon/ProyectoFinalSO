@@ -3,9 +3,9 @@ Widget para monitoreo de Red
 """
 
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-                             QGroupBox, QGridLayout, QProgressBar, QFrame,
+                             QGroupBox, QGridLayout, QFrame,
                              QSizePolicy, QTableWidget, QTableWidgetItem,
-                             QHeaderView, QTabWidget)
+                             QHeaderView, QPushButton, QDialog)
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QColor
 import matplotlib
@@ -15,209 +15,98 @@ from matplotlib.figure import Figure
 from datetime import datetime
 
 
-class NetworkWidget(QWidget):
-    """Widget para mostrar información de red."""
+class NetworkDetailsDialog(QDialog):
+    """Ventana emergente para ver detalles de interfaces y conexiones."""
     
     def __init__(self, network_monitor, parent=None):
         super().__init__(parent)
         self.network_monitor = network_monitor
+        self.setWindowTitle("Detalles de Red - Interfaces y Conexiones")
+        self.setMinimumSize(800, 600)
         self.setup_ui()
         
     def setup_ui(self):
-        """Configura la interfaz del widget."""
         layout = QVBoxLayout(self)
-        layout.setSpacing(10)
         
         # Título
-        title = QLabel("🌐 Monitor de Red")
-        title.setFont(QFont('Arial', 16, QFont.Bold))
+        title = QLabel("Detalles de Red")
+        title.setFont(QFont('Arial', 14, QFont.Bold))
         title.setAlignment(Qt.AlignCenter)
         layout.addWidget(title)
         
-        # Panel de velocidades actuales
-        speed_group = QGroupBox("Velocidad Actual de Red")
-        speed_layout = QHBoxLayout(speed_group)
-        
-        # Download
-        download_widget = QWidget()
-        download_layout = QVBoxLayout(download_widget)
-        download_layout.setAlignment(Qt.AlignCenter)
-        
-        download_icon = QLabel("▼")
-        download_icon.setFont(QFont('Arial', 40, QFont.Bold))
-        download_icon.setAlignment(Qt.AlignCenter)
-        download_icon.setStyleSheet("color: #4caf50;")
-        
-        self.download_speed_label = QLabel("0 KB/s")
-        self.download_speed_label.setFont(QFont('Arial', 24, QFont.Bold))
-        self.download_speed_label.setAlignment(Qt.AlignCenter)
-        self.download_speed_label.setStyleSheet("color: #4caf50;")
-        
-        download_title = QLabel("Download")
-        download_title.setAlignment(Qt.AlignCenter)
-        download_title.setFont(QFont('Arial', 12, QFont.Bold))
-        
-        download_layout.addWidget(download_icon)
-        download_layout.addWidget(self.download_speed_label)
-        download_layout.addWidget(download_title)
-        
-        download_widget.setStyleSheet("background-color: #e8f5e9; border-radius: 10px; padding: 10px;")
-        
-        # Upload
-        upload_widget = QWidget()
-        upload_layout = QVBoxLayout(upload_widget)
-        upload_layout.setAlignment(Qt.AlignCenter)
-        
-        upload_icon = QLabel("▲")
-        upload_icon.setFont(QFont('Arial', 40, QFont.Bold))
-        upload_icon.setAlignment(Qt.AlignCenter)
-        upload_icon.setStyleSheet("color: #2196f3;")
-        
-        self.upload_speed_label = QLabel("0 KB/s")
-        self.upload_speed_label.setFont(QFont('Arial', 24, QFont.Bold))
-        self.upload_speed_label.setAlignment(Qt.AlignCenter)
-        self.upload_speed_label.setStyleSheet("color: #2196f3;")
-        
-        upload_title = QLabel("Upload")
-        upload_title.setAlignment(Qt.AlignCenter)
-        upload_title.setFont(QFont('Arial', 12, QFont.Bold))
-        
-        upload_layout.addWidget(upload_icon)
-        upload_layout.addWidget(self.upload_speed_label)
-        upload_layout.addWidget(upload_title)
-        
-        upload_widget.setStyleSheet("background-color: #e3f2fd; border-radius: 10px; padding: 10px;")
-        
-        speed_layout.addWidget(download_widget)
-        speed_layout.addWidget(upload_widget)
-        
-        layout.addWidget(speed_group)
-        
-        # Panel de estadísticas totales
-        stats_group = QGroupBox("Estadísticas Totales")
-        stats_layout = QGridLayout(stats_group)
-        
-        self.total_download_label = QLabel("Total Descargado: 0 GB")
-        self.total_upload_label = QLabel("Total Subido: 0 GB")
-        self.packets_recv_label = QLabel("Paquetes Recibidos: 0")
-        self.packets_sent_label = QLabel("Paquetes Enviados: 0")
-        self.errors_label = QLabel("Errores: 0")
-        self.drops_label = QLabel("Drops: 0")
-        
-        labels = [self.total_download_label, self.total_upload_label,
-                  self.packets_recv_label, self.packets_sent_label,
-                  self.errors_label, self.drops_label]
-        
-        for i, label in enumerate(labels):
-            label.setStyleSheet("padding: 8px; background-color: #f5f5f5; border-radius: 5px;")
-            row, col = divmod(i, 2)
-            stats_layout.addWidget(label, row, col)
-        
-        layout.addWidget(stats_group)
-        
-        # Tabs para gráfico e interfaces
-        tabs = QTabWidget()
-        
-        # Tab de gráfico
-        chart_widget = QWidget()
-        chart_layout = QVBoxLayout(chart_widget)
-        
-        self.figure = Figure(figsize=(8, 4), dpi=100)
-        self.figure.patch.set_facecolor('#f0f0f0')
-        self.canvas = FigureCanvas(self.figure)
-        self.canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.ax = self.figure.add_subplot(111)
-        
-        chart_layout.addWidget(self.canvas)
-        tabs.addTab(chart_widget, "Tiempo Real")
-        
-        # Tab de interfaces
-        interfaces_widget = QWidget()
-        interfaces_layout = QVBoxLayout(interfaces_widget)
+        # --- TABLA DE INTERFACES ---
+        group_interfaces = QGroupBox("Interfaces de Red")
+        layout_interfaces = QVBoxLayout(group_interfaces)
         
         self.interfaces_table = QTableWidget()
         self.interfaces_table.setColumnCount(5)
         self.interfaces_table.setHorizontalHeaderLabels([
             "Interfaz", "Estado", "Dirección IP", "Velocidad (Mbps)", "MTU"
         ])
+        self.interfaces_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        layout_interfaces.addWidget(self.interfaces_table)
+        layout.addWidget(group_interfaces)
         
-        header = self.interfaces_table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Stretch)
+        # --- TABLA DE CONEXIONES ---
+        group_connections = QGroupBox("Conexiones Activas")
+        layout_connections = QVBoxLayout(group_connections)
         
-        interfaces_layout.addWidget(self.interfaces_table)
-        tabs.addTab(interfaces_widget, "Interfaces")
-        
-        # Tab de conexiones
-        connections_widget = QWidget()
-        connections_layout = QVBoxLayout(connections_widget)
+        self.connections_label = QLabel("Total conexiones: 0")
+        layout_connections.addWidget(self.connections_label)
         
         self.connections_table = QTableWidget()
         self.connections_table.setColumnCount(5)
         self.connections_table.setHorizontalHeaderLabels([
             "Local", "Remoto", "Estado", "PID", "Proceso"
         ])
+        self.connections_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        layout_connections.addWidget(self.connections_table)
+        layout.addWidget(group_connections)
         
-        header = self.connections_table.horizontalHeader()
-        header.setSectionResizeMode(QHeaderView.Stretch)
-        
-        self.connections_count_label = QLabel("Conexiones activas: 0")
-        
-        connections_layout.addWidget(self.connections_count_label)
-        connections_layout.addWidget(self.connections_table)
-        tabs.addTab(connections_widget, "Conexiones")
-        
-        layout.addWidget(tabs)
+        # Botón cerrar
+        btn_close = QPushButton("Cerrar")
+        btn_close.clicked.connect(self.close)
+        layout.addWidget(btn_close)
         
     def update_data(self):
-        """Actualiza los datos del widget."""
+        """Actualiza las tablas de la ventana de detalles."""
         stats = self.network_monitor.get_current_stats()
         
-        # Actualizar velocidades
-        speeds = stats['speeds']
-        self.download_speed_label.setText(speeds['download']['formatted'])
-        self.upload_speed_label.setText(speeds['upload']['formatted'])
-        
-        # Actualizar estadísticas
-        io = stats['io_counters']
-        self.total_download_label.setText(f"Total Descargado: {io['bytes_recv_gb']:.2f} GB")
-        self.total_upload_label.setText(f"Total Subido: {io['bytes_sent_gb']:.2f} GB")
-        self.packets_recv_label.setText(f"Paquetes Recibidos: {io['packets_recv']:,}")
-        self.packets_sent_label.setText(f"Paquetes Enviados: {io['packets_sent']:,}")
-        self.errors_label.setText(f"Errores: In={io['errin']:,} / Out={io['errout']:,}")
-        self.drops_label.setText(f"Drops: In={io['dropin']:,} / Out={io['dropout']:,}")
-        
-        # Actualizar interfaces
+        # 1. Interfaces
         interfaces = stats['interfaces']
         self.interfaces_table.setRowCount(len(interfaces))
         
         for row, iface in enumerate(interfaces):
             self.interfaces_table.setItem(row, 0, QTableWidgetItem(iface['name']))
             
-            status_item = QTableWidgetItem("🟢 Activa" if iface['is_up'] else "🔴 Inactiva")
-            status_item.setBackground(QColor('#c8e6c9' if iface['is_up'] else '#ffcdd2'))
+            status_text = "🟢 Activa" if iface['is_up'] else "🔴 Inactiva"
+            status_item = QTableWidgetItem(status_text)
+            # Colorear fondo celda
+            bg_color = QColor('#c8e6c9') if iface['is_up'] else QColor('#ffcdd2')
+            status_item.setBackground(bg_color)
             self.interfaces_table.setItem(row, 1, status_item)
             
-            # Buscar dirección IPv4
-            ipv4 = ""
+            ipv4 = "N/A"
             for addr in iface['addresses']:
-                if 'AF_INET' in addr['family'] and addr['address']:
+                if addr['family'] == 'IPv4' and addr['address']:
                     ipv4 = addr['address']
                     break
-            self.interfaces_table.setItem(row, 2, QTableWidgetItem(ipv4 or "N/A"))
             
+            self.interfaces_table.setItem(row, 2, QTableWidgetItem(ipv4))
             self.interfaces_table.setItem(row, 3, QTableWidgetItem(str(iface['speed'])))
             self.interfaces_table.setItem(row, 4, QTableWidgetItem(str(iface['mtu'])))
-        
-        # Actualizar conexiones
+            
+        # 2. Conexiones
         try:
+            # Obtener conexiones frescas
             connections = self.network_monitor.get_connections()
-            self.connections_count_label.setText(f"Conexiones activas: {len(connections)}")
+            self.connections_label.setText(f"Total conexiones activas: {len(connections)}")
             
-            # Mostrar solo las primeras 50 conexiones para rendimiento
-            display_connections = connections[:50]
-            self.connections_table.setRowCount(len(display_connections))
+            # Limitar visualización a 100 para no congelar la UI
+            display_conns = connections[:100]
+            self.connections_table.setRowCount(len(display_conns))
             
-            for row, conn in enumerate(display_connections):
+            for row, conn in enumerate(display_conns):
                 local = f"{conn['local_address']}:{conn['local_port']}"
                 remote = f"{conn['remote_address']}:{conn['remote_port']}" if conn['remote_address'] else "-"
                 
@@ -226,18 +115,195 @@ class NetworkWidget(QWidget):
                 
                 status_item = QTableWidgetItem(conn['status'])
                 if conn['status'] == 'ESTABLISHED':
-                    status_item.setBackground(QColor('#c8e6c9'))
+                    status_item.setBackground(QColor('#e8f5e9')) # Verde claro
                 elif conn['status'] == 'LISTEN':
-                    status_item.setBackground(QColor('#e3f2fd'))
+                    status_item.setBackground(QColor('#e3f2fd')) # Azul claro
+                    
                 self.connections_table.setItem(row, 2, status_item)
-                
                 self.connections_table.setItem(row, 3, QTableWidgetItem(str(conn['pid'] or "-")))
                 self.connections_table.setItem(row, 4, QTableWidgetItem(conn.get('process_name', '-')))
+                
         except Exception:
             pass
+
+
+class NetworkWidget(QWidget):
+    """Widget principal para mostrar información de red."""
+    
+    def __init__(self, network_monitor, parent=None):
+        super().__init__(parent)
+        self.network_monitor = network_monitor
+        self.details_dialog = None # Referencia a la ventana de detalles
+        self.setup_ui()
         
-        # Actualizar gráfico
+    def setup_ui(self):
+        """Configura la interfaz del widget."""
+        layout = QVBoxLayout(self)
+        layout.setSpacing(15)
+        
+        # Título
+        title = QLabel("🌐 Monitor de Red")
+        title.setFont(QFont('Arial', 16, QFont.Bold))
+        title.setAlignment(Qt.AlignCenter)
+        layout.addWidget(title)
+        
+        # --- PANEL DE VELOCIDAD (Mejorado para no cortar números) ---
+        speed_group = QGroupBox("Ancho de Banda Actual")
+        speed_layout = QHBoxLayout(speed_group)
+        speed_layout.setSpacing(20)
+        
+        # Estilo base para las cajas de velocidad
+        box_style = """
+            QFrame {
+                border-radius: 10px;
+                background-color: %s;
+            }
+            QLabel {
+                background-color: transparent;
+            }
+        """
+        
+        # --- DOWNLOAD ---
+        dl_frame = QFrame()
+        dl_frame.setStyleSheet(box_style % "#e8f5e9") # Verde muy suave
+        dl_layout = QVBoxLayout(dl_frame)
+        dl_layout.setContentsMargins(10, 15, 10, 15) # Más padding vertical
+        
+        dl_icon = QLabel("▼")
+        dl_icon.setAlignment(Qt.AlignCenter)
+        dl_icon.setFont(QFont('Arial', 24, QFont.Bold))
+        dl_icon.setStyleSheet("color: #2e7d32;")
+        
+        self.download_speed_label = QLabel("0.0 KB/s")
+        self.download_speed_label.setAlignment(Qt.AlignCenter)
+        # Reducimos un poco la fuente para evitar recortes
+        self.download_speed_label.setFont(QFont('Arial', 20, QFont.Bold))
+        self.download_speed_label.setStyleSheet("color: #1b5e20;")
+        
+        dl_title = QLabel("Descarga")
+        dl_title.setAlignment(Qt.AlignCenter)
+        dl_title.setFont(QFont('Arial', 10))
+        
+        dl_layout.addWidget(dl_icon)
+        dl_layout.addWidget(self.download_speed_label)
+        dl_layout.addWidget(dl_title)
+        
+        # --- UPLOAD ---
+        ul_frame = QFrame()
+        ul_frame.setStyleSheet(box_style % "#e3f2fd") # Azul muy suave
+        ul_layout = QVBoxLayout(ul_frame)
+        ul_layout.setContentsMargins(10, 15, 10, 15)
+        
+        ul_icon = QLabel("▲")
+        ul_icon.setAlignment(Qt.AlignCenter)
+        ul_icon.setFont(QFont('Arial', 24, QFont.Bold))
+        ul_icon.setStyleSheet("color: #1565c0;")
+        
+        self.upload_speed_label = QLabel("0.0 KB/s")
+        self.upload_speed_label.setAlignment(Qt.AlignCenter)
+        self.upload_speed_label.setFont(QFont('Arial', 20, QFont.Bold))
+        self.upload_speed_label.setStyleSheet("color: #0d47a1;")
+        
+        ul_title = QLabel("Subida")
+        ul_title.setAlignment(Qt.AlignCenter)
+        ul_title.setFont(QFont('Arial', 10))
+        
+        ul_layout.addWidget(ul_icon)
+        ul_layout.addWidget(self.upload_speed_label)
+        ul_layout.addWidget(ul_title)
+        
+        # Añadir al layout horizontal
+        speed_layout.addWidget(dl_frame)
+        speed_layout.addWidget(ul_frame)
+        
+        layout.addWidget(speed_group)
+        
+        # --- ESTADÍSTICAS TOTALES ---
+        stats_group = QGroupBox("Estadísticas de la Sesión")
+        stats_layout = QGridLayout(stats_group)
+        
+        self.total_dl_label = QLabel("Total Descargado: 0 GB")
+        self.total_ul_label = QLabel("Total Subido: 0 GB")
+        self.pkts_in_label = QLabel("Paquetes Recibidos: 0")
+        self.pkts_out_label = QLabel("Paquetes Enviados: 0")
+        
+        # Estilo etiquetas estadísticas
+        st_style = "background-color: #f5f5f5; padding: 8px; border-radius: 4px;"
+        for lbl in [self.total_dl_label, self.total_ul_label, self.pkts_in_label, self.pkts_out_label]:
+            lbl.setStyleSheet(st_style)
+            
+        stats_layout.addWidget(self.total_dl_label, 0, 0)
+        stats_layout.addWidget(self.total_ul_label, 0, 1)
+        stats_layout.addWidget(self.pkts_in_label, 1, 0)
+        stats_layout.addWidget(self.pkts_out_label, 1, 1)
+        
+        layout.addWidget(stats_group)
+        
+        # --- GRÁFICO ---
+        chart_group = QGroupBox("Historial de Actividad (Último Minuto)")
+        chart_layout = QVBoxLayout(chart_group)
+        
+        self.figure = Figure(figsize=(8, 3), dpi=100)
+        self.figure.patch.set_facecolor('#f0f0f0')
+        self.figure.subplots_adjust(bottom=0.15, top=0.9, left=0.1, right=0.95)
+        
+        self.canvas = FigureCanvas(self.figure)
+        self.canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.ax = self.figure.add_subplot(111)
+        
+        chart_layout.addWidget(self.canvas)
+        layout.addWidget(chart_group)
+        
+        # --- BOTÓN PARA VER DETALLES ---
+        self.btn_details = QPushButton("🔍 Ver Detalles de Conexiones e Interfaces")
+        self.btn_details.setCursor(Qt.PointingHandCursor)
+        self.btn_details.setFixedHeight(40)
+        self.btn_details.setStyleSheet("""
+            QPushButton {
+                background-color: #607d8b;
+                color: white;
+                font-weight: bold;
+                border-radius: 5px;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #546e7a;
+            }
+        """)
+        self.btn_details.clicked.connect(self.show_details)
+        layout.addWidget(self.btn_details)
+        
+    def show_details(self):
+        """Abre la ventana de detalles."""
+        if self.details_dialog is None:
+            self.details_dialog = NetworkDetailsDialog(self.network_monitor, self)
+        
+        self.details_dialog.show()
+        self.details_dialog.raise_()
+        self.details_dialog.activateWindow()
+        
+    def update_data(self):
+        """Actualiza los datos del widget principal y del diálogo si está abierto."""
+        stats = self.network_monitor.get_current_stats()
+        
+        # 1. Velocidades
+        speeds = stats['speeds']
+        self.download_speed_label.setText(speeds['download']['formatted'])
+        self.upload_speed_label.setText(speeds['upload']['formatted'])
+        
+        # 2. Estadísticas Totales
+        io = stats['io_counters']
+        self.total_dl_label.setText(f"📥 Total Descargado: {io['bytes_recv_gb']:.2f} GB")
+        self.total_ul_label.setText(f"📤 Total Subido: {io['bytes_sent_gb']:.2f} GB")
+        self.pkts_in_label.setText(f"📦 Paquetes Rx: {io['packets_recv']:,}")
+        self.pkts_out_label.setText(f"📦 Paquetes Tx: {io['packets_sent']:,}")
+        
+        # 3. Gráfico
         self.update_chart()
+        
+        # 4. Actualizar ventana de detalles si está visible
+        if self.details_dialog and self.details_dialog.isVisible():
+            self.details_dialog.update_data()
     
     def update_chart(self):
         """Actualiza el gráfico de historial."""
@@ -251,43 +317,36 @@ class NetworkWidget(QWidget):
             upload = history['upload_kbps']
             
             now = datetime.now()
-            times_relative = [-(now - t).total_seconds() for t in timestamps]
+            times = [-(now - t).total_seconds() for t in timestamps]
             
-            # Filtrar solo los últimos 60 segundos
-            filtered_times = []
-            filtered_download = []
-            filtered_upload = []
-            for t, d, u in zip(times_relative, download, upload):
+            f_times, f_dl, f_ul = [], [], []
+            for t, d, u in zip(times, download, upload):
                 if t >= -60:
-                    filtered_times.append(t)
-                    filtered_download.append(d)
-                    filtered_upload.append(u)
+                    f_times.append(t)
+                    f_dl.append(d)
+                    f_ul.append(u)
             
-            if filtered_times:
-                # Gráfico de download
-                self.ax.fill_between(filtered_times, filtered_download, alpha=0.3, color='#4caf50', label='Download')
-                self.ax.plot(filtered_times, filtered_download, color='#4caf50', linewidth=2)
+            if f_times:
+                # Download (Verde)
+                self.ax.fill_between(f_times, f_dl, alpha=0.3, color='#4caf50', label='Descarga')
+                self.ax.plot(f_times, f_dl, color='#4caf50', linewidth=1.5)
                 
-                # Gráfico de upload
-                self.ax.fill_between(filtered_times, filtered_upload, alpha=0.3, color='#2196f3', label='Upload')
-                self.ax.plot(filtered_times, filtered_upload, color='#2196f3', linewidth=2)
+                # Upload (Azul)
+                self.ax.fill_between(f_times, f_ul, alpha=0.3, color='#2196f3', label='Subida')
+                self.ax.plot(f_times, f_ul, color='#2196f3', linewidth=1.5)
                 
-                max_val = max(max(filtered_download + [1]), max(filtered_upload + [1]))
-            else:
-                max_val = 1
-            
-            self.ax.set_xlim(-60, 0)
-            self.ax.set_ylim(0, max_val * 1.1)
-            self.ax.set_xlabel('Tiempo (segundos)')
-            self.ax.set_ylabel('Velocidad (KB/s)')
-            self.ax.grid(True, alpha=0.3)
-            self.ax.legend(loc='upper left')
-            self.ax.set_title('Ancho de Banda en tiempo real')
+                # Ajuste de escala Y dinámico
+                max_val = max(max(f_dl + [1]), max(f_ul + [1]))
+                self.ax.set_ylim(0, max_val * 1.2)
+                
+                self.ax.legend(loc='upper left', fontsize=8)
+                self.ax.grid(True, linestyle='--', alpha=0.4)
+                self.ax.set_xlabel('Segundos atrás', fontsize=8)
+                self.ax.set_ylabel('KB/s', fontsize=8)
+                self.ax.set_xlim(-60, 0)
+                
         else:
             self.ax.text(0.5, 0.5, 'Recopilando datos...', 
                         ha='center', va='center', transform=self.ax.transAxes)
-            self.ax.set_xlim(-60, 0)
-            self.ax.set_ylim(0, 100)
         
-        self.figure.tight_layout()
         self.canvas.draw()
